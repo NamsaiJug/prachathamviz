@@ -402,7 +402,7 @@ const RECT_H           = ROW_H - ROW_GAP * 2;   // 8px — also the width (squar
 
 const xAxisH   = 56;   // tall enough for axis label + ticks + "เวลาที่โพสต์"
 const tlMargin = { top: 4, right: 40, bottom: 4, left: 86 };  // right:40 prevents last post from clipping
-const barMargin = { top: 16, right: 16, bottom: 52, left: 0 }; // left:0 so bars align with header text
+const barMargin = { top: 16, right: 16, bottom: 52, left: 36 }; // left:36 for y-axis tick labels
 
 let allData     = [];
 let selectedDay = DEFAULT_DAY;
@@ -568,6 +568,11 @@ function buildBarChart() {
     .call(a => a.select(".domain").remove());
 
   // No y-axis labels — left margin is 0, gridlines give context
+
+  // Y axis labels
+  g.append("g").attr("class", "bar-axis")
+    .call(d3.axisLeft(y).ticks(3).tickSize(3))
+    .call(a => a.select(".domain").remove());
 
   // Bars
   g.selectAll(".bar-rect").data(days).join("rect")
