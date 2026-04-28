@@ -33,39 +33,71 @@
     background: var(--gray-100);
     color: var(--green-1);
     min-height: 100vh;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Outer container — full width, hidden until data loads */
+  #app {
+    display: none;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Inner stack — max width, centered, vertical flex */
+  #app-inner {
+    max-width: 960px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    padding: 24px 16px 48px;
+    align-items: stretch;
+    box-sizing: border-box;
+  }
+
+  @media (max-width: 600px) {
+    #app-inner {
+      padding: 16px 10px 32px;
+    }
   }
 
   /* ── Chart wrappers ── */
   .chart-wrap {
     width: 100%;
-    max-width: 960px;
+    box-sizing: border-box;
     background: var(--card-bg);
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 18px 18px 12px;
-    margin-bottom: 16px;
   }
 
+  /* Bar section: header text + chart SVG stacked, not overlapping */
+  .bar-section {
+    width: 100%;
+    margin-bottom: 0;
+  }
+
+  /* Bar wrap: only contains the SVG, fixed height for the chart area */
   .chart-wrap.bar-wrap {
     background: transparent;
     border: none;
     border-radius: 0;
-    max-height: 22vh;
-    min-height: 160px;
-    display: flex;
-    flex-direction: column;
-    padding: 14px 0 16px;   /* bottom padding ensures x-axis labels aren't clipped by container edge */
-    margin-bottom: 0;
-    overflow: visible;       /* let SVG axis labels paint outside the flex box */
+    height: 20vh;
+    min-height: 130px;
+    max-height: 220px;
+    display: block;
+    padding: 0;
+    overflow: visible;   /* lets date labels paint below without affecting layout flow */
+    position: relative;
   }
 
-  /* Bar SVG itself must also allow overflow */
+  /* Bar SVG fills the wrap, labels can overflow downward into the gap */
   #bar-chart {
+    display: block;
     overflow: visible;
+    width: 100%;
+    height: 100%;
   }
 
   .bar-header-row {
@@ -74,21 +106,18 @@
     align-items: flex-start;
     gap: 12px;
     flex-shrink: 0;
+    margin-bottom: 6px;
   }
 
   .bar-totals {
     font-size: 0.75rem;
-    font-weight: 400;
-    color: var(--gray-500);
+    font-weight: 500;
+    color: var(--green-2);
     text-align: right;
     white-space: nowrap;
     flex-shrink: 0;
     padding-top: 2px;
-  }
-
-  .chart-wrap.bar-wrap svg {
-    flex: 1;
-    min-height: 0;
+    line-height: 1.6;
   }
 
   /* Timeline: 60vh, flex column */
@@ -105,12 +134,42 @@
   .tl-header-row {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: center;
     gap: 12px;
     margin-bottom: 2px;
   }
 
-  /* Cluster timeline subtitle — now top-right */
+  /* Date nav: chevron < date > chevron inline */
+  .date-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .chevron-btn {
+    background: none;
+    border: 2px solid var(--green-3);
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: var(--green-2);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+    user-select: none;
+  }
+  .chevron-btn:hover  { background: var(--green-4); color: var(--green-1); border-color: transparent; }
+  .chevron-btn:active { background: var(--green-3); border-color: transparent; }
+  .chevron-btn:disabled { opacity: 0.25; cursor: default; }
+  .chevron-btn:disabled:hover { background: none; border-color: var(--green-3); }
+
+  /* Cluster timeline subtitle — top-right, 2 lines */
   .tl-subtitle {
     font-size: 0.75rem;
     font-weight: 500;
@@ -118,6 +177,7 @@
     text-align: right;
     white-space: nowrap;
     flex-shrink: 0;
+    line-height: 1.6;
   }
   .tl-xaxis-sticky {
     flex-shrink: 0;
@@ -193,6 +253,18 @@
   .hour-line { stroke: var(--gray-200); stroke-width: 1; stroke-dasharray: 4 3; }
 
   /* ── Shared card styles ── */
+  .card-time-pill {
+    display: inline-block;
+    background: var(--green-4);
+    color: var(--green-1);
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+    letter-spacing: 0.01em;
+  }
+
   .card-content {
     color: var(--green-1); font-size: 0.82rem; line-height: 1.55;
     word-break: break-word; margin-bottom: 10px;
@@ -247,6 +319,10 @@
   #modal-close:hover { color: var(--green-1); }
   #modal .card-content { margin-right: 18px; }
 
+  .bar-section .section-title { color: var(--gray-600); }
+  .bar-section .section-desc  { color: var(--gray-400); }
+  .bar-section .bar-totals    { color: var(--gray-500); }
+
   #loading { color: var(--gray-500); font-size: 0.85rem; padding: 60px; text-align: center; }
 </style>
 </head>
@@ -254,26 +330,32 @@
 
 <div id="loading">กำลังโหลดข้อมูล…</div>
 
-<div id="app" style="display:none; width:100%; max-width:960px;">
+<div id="app">
+  <div id="app-inner">
 
-  <!-- Bar chart -->
-  <div class="chart-wrap bar-wrap">
+  <!-- Bar chart section: header above, chart below -->
+  <div class="bar-section">
     <div class="bar-header-row">
       <div>
         <div class="section-title">ภาพรวม</div>
         <div class="section-desc">จำนวนโพสต์รายวันของ 38 เพจที่มีเนื้อหาเดียวกัน และโพสต์ห่างกันไม่เกิน 5 นาที</div>
-        <div class="section-hint">คลิกแท่งเพื่อดูโพสต์ในแต่ละวัน</div>
       </div>
       <div class="bar-totals" id="bar-totals">—</div>
     </div>
-    <svg id="bar-chart"></svg>
+    <div class="chart-wrap bar-wrap">
+      <svg id="bar-chart"></svg>
+    </div>
   </div>
 
   <!-- Timeline -->
   <div class="chart-wrap tl-wrap">
     <div class="tl-header">
       <div class="tl-header-row">
-        <div class="section-title" id="tl-date-label">—</div>
+        <div class="date-nav">
+          <button class="chevron-btn" id="btn-prev" title="วันก่อนหน้า">&#8249;</button>
+          <div class="section-title" id="tl-date-label">—</div>
+          <button class="chevron-btn" id="btn-next" title="วันถัดไป">&#8250;</button>
+        </div>
         <div class="tl-subtitle" id="tl-subtitle">—</div>
       </div>
       <div class="tl-legend">
@@ -290,6 +372,7 @@
     </div>
   </div>
 
+  </div><!-- /app-inner -->
 </div>
 
 <div id="tooltip"></div>
@@ -319,7 +402,7 @@ const RECT_H           = ROW_H - ROW_GAP * 2;   // 8px — also the width (squar
 
 const xAxisH   = 56;   // tall enough for axis label + ticks + "เวลาที่โพสต์"
 const tlMargin = { top: 4, right: 40, bottom: 4, left: 86 };  // right:40 prevents last post from clipping
-const barMargin = { top: 16, right: 16, bottom: 70, left: 54 }; // generous margins so no tick gets clipped
+const barMargin = { top: 16, right: 16, bottom: 52, left: 0 }; // left:0 so bars align with header text
 
 let allData     = [];
 let selectedDay = DEFAULT_DAY;
@@ -361,7 +444,15 @@ function escHtml(str) {
 }
 
 function getWidth() {
-  return Math.min(document.getElementById("app").clientWidth - 32, 928);
+  // Measure the bar-wrap or tl-wrap directly — these are the actual chart containers
+  // and their clientWidth already excludes any ancestor padding.
+  const barWrap = document.querySelector(".bar-wrap");
+  if (barWrap && barWrap.clientWidth > 0) return barWrap.clientWidth;
+  const tlWrap = document.querySelector(".tl-wrap");
+  if (tlWrap && tlWrap.clientWidth > 0) return tlWrap.clientWidth;
+  // Fallback: app-inner minus its own horizontal padding (16px × 2)
+  const inner = document.getElementById("app-inner");
+  return inner ? Math.max(100, inner.clientWidth - 32) : Math.min(window.innerWidth - 32, 928);
 }
 
 function formatDateThai(dateStr) {
@@ -395,13 +486,14 @@ fetch(DATA_URL)
     }));
 
     document.getElementById("loading").style.display = "none";
-    document.getElementById("app").style.display     = "";
+    document.getElementById("app").style.display     = "block";
 
     // rAF ensures the browser has done its first layout before we measure/draw
     requestAnimationFrame(() => {
       buildBarChart();
       buildTimeline();
       setupModal();
+      setupDateNav();
     });
 
     let rTimer;
@@ -418,13 +510,12 @@ fetch(DATA_URL)
 //  BAR CHART
 // ════════════════════════════════════════════════════════════
 function buildBarChart() {
-  // Compute SVG height from viewport.
-  // We need: innerH (bars) + top margin + bottom margin (for date labels).
-  // HEADER_RESERVED = text rows above the SVG.
-  const HEADER_RESERVED = 54;
-  const totalH  = Math.round(window.innerHeight * 0.20);
-  const svgH    = Math.max(barMargin.top + barMargin.bottom + 40,
-                           totalH - HEADER_RESERVED);
+  // bar-wrap now only contains the SVG (header moved outside).
+  // Use its clientHeight directly — it's set by CSS to 20vh.
+  const container = document.querySelector(".bar-wrap");
+  const svgH = container
+    ? Math.max(barMargin.top + barMargin.bottom + 30, container.clientHeight)
+    : Math.max(barMargin.top + barMargin.bottom + 30, Math.round(window.innerHeight * 0.20));
 
   const W      = getWidth();
   const innerW = W - barMargin.left - barMargin.right;
@@ -437,12 +528,12 @@ function buildBarChart() {
   const days   = Array.from(dayMap, ([date, count]) => ({ date, count }))
                       .sort((a, b) => a.date.localeCompare(b.date));
 
-  // Totals for all data
+  // Totals for all data — 2 lines
   const totalPosts    = allData.length;
   const totalClusters = new Set(allData.map(d => d.cluster_id)).size;
   document.getElementById("bar-totals").innerHTML =
-    `ทั้งหมด ${totalPosts.toLocaleString()} โพสต์ <br>
-    แบ่งออกเป็น ${totalClusters.toLocaleString()} กลุ่ม`;
+    `<div>ทั้งหมด <strong>${totalPosts.toLocaleString()}</strong> โพสต์</div>` +
+    `<div>แบ่งออกเป็น <strong>${totalClusters.toLocaleString()}</strong> กลุ่ม</div>`;
 
   const x = d3.scaleBand().domain(days.map(d => d.date)).range([0, innerW]).padding(0.2);
   const y = d3.scaleLinear().domain([0, d3.max(days, d => d.count) * 1.12]).range([innerH, 0]);
@@ -454,20 +545,29 @@ function buildBarChart() {
     .attr("x1", 0).attr("x2", innerW)
     .attr("y1", d => y(d)).attr("y2", d => y(d));
 
-  // X axis — Thai date format "d ม.ค. yyyy", show every ~7th label
-  const tickDates = x.domain().filter((_, i) => i % 7 === 0 || i === 0 || i === x.domain().length - 1);
+  // X axis — Thai date format, responsive tick density
+  const isMobile = W < 600;
+  const isTablet = W < 900;
+  // Desktop: every 7 days; tablet: every 10 days; mobile: every 14 days
+  const step = isMobile ? 14 : isTablet ? 10 : 7;
+  const tickDates = x.domain().filter((_, i) =>
+    i === 0 || i === x.domain().length - 1 || i % step === 0
+  );
   g.append("g").attr("class", "bar-axis")
     .attr("transform", `translate(0,${innerH})`)
     .call(d3.axisBottom(x)
       .tickValues(tickDates)
-      .tickFormat(d => formatDateThai(d))
+      .tickFormat(d => {
+        // On mobile show shorter "d ม.ค." without year; desktop full "d ม.ค. yyyy"
+        const [y, m, day] = d.split("-").map(Number);
+        return isMobile
+          ? `${day} ${THAI_MONTHS[m - 1]}`
+          : `${day} ${THAI_MONTHS[m - 1]} ${y}`;
+      })
       .tickSize(4))
     .call(a => a.select(".domain").remove());
 
-  // Y axis
-  g.append("g").attr("class", "bar-axis")
-    .call(d3.axisLeft(y).ticks(3).tickSize(3))
-    .call(a => a.select(".domain").remove());
+  // No y-axis labels — left margin is 0, gridlines give context
 
   // Bars
   g.selectAll(".bar-rect").data(days).join("rect")
@@ -499,8 +599,8 @@ function buildTimeline() {
   // ── Header text (Thai) ───────────────────────────────────
   document.getElementById("tl-date-label").textContent = formatDateThai(selectedDay);
   document.getElementById("tl-subtitle").innerHTML =
-    `ทั้งหมด ${dayData.length} โพสต์ <br>
-    แบ่งออกเป็น ${nClusters} กลุ่ม`;
+    `<div>ทั้งหมด <strong>${dayData.length}</strong> โพสต์</div>` +
+    `<div>แบ่งออกเป็น <strong>${nClusters}</strong> กลุ่ม</div>`;
 
   const svgBody = d3.select("#timeline-chart");
   const svgXax  = d3.select("#xaxis-svg");
@@ -692,25 +792,36 @@ function renderXAxis(xBase, gXAxis, gHours, gMarks, innerW, innerH) {
   const xZ = xBase;
   gXAxis.selectAll("*").remove();
 
+  // Responsive tick density based on available width
+  const isMobile = innerW < 400;
+  const isTablet = innerW < 650;
+  // Desktop: every hour; tablet: every 2h; mobile: every 4h
+  const hourStep  = isMobile ? 4 : isTablet ? 2 : 1;
+
   // Domain line
   const [x0, x1] = xZ.range();
   gXAxis.append("line")
     .attr("x1", x0).attr("x2", x1).attr("y1", 0).attr("y2", 0)
     .attr("stroke", "#CBD5E1");
 
-  const hourTickData = d3.timeHour.range(xZ.domain()[0], xZ.domain()[1]);
-  const halfTickData = d3.timeMinute.every(30).range(xZ.domain()[0], xZ.domain()[1]);
+  const allHours  = d3.timeHour.range(xZ.domain()[0], xZ.domain()[1]);
+  const hourTickData = allHours.filter(d => d.getHours() % hourStep === 0);
+  const halfTickData = hourStep === 1
+    ? d3.timeMinute.every(30).range(xZ.domain()[0], xZ.domain()[1])
+    : [];  // skip minor ticks on tablet/mobile to avoid clutter
 
-  // Half-hour minor ticks
-  gXAxis.selectAll(".tick-minor")
-    .data(halfTickData)
-    .join("line")
-    .attr("class", "tick-minor")
-    .attr("x1", d => xZ(d)).attr("x2", d => xZ(d))
-    .attr("y1", 0).attr("y2", 4)
-    .attr("stroke", "#CBD5E1");
+  // Half-hour minor ticks (desktop only)
+  if (halfTickData.length) {
+    gXAxis.selectAll(".tick-minor")
+      .data(halfTickData)
+      .join("line")
+      .attr("class", "tick-minor")
+      .attr("x1", d => xZ(d)).attr("x2", d => xZ(d))
+      .attr("y1", 0).attr("y2", 4)
+      .attr("stroke", "#CBD5E1");
+  }
 
-  // Hour tick lines (taller)
+  // Hour tick lines
   gXAxis.selectAll(".tick-hour-line")
     .data(hourTickData)
     .join("line")
@@ -727,13 +838,13 @@ function renderXAxis(xBase, gXAxis, gHours, gMarks, innerW, innerH) {
     .attr("x", d => xZ(d))
     .attr("y", 22)
     .attr("text-anchor", "middle")
-    .attr("font-size", 10)
+    .attr("font-size", isMobile ? 9 : 10)
     .attr("font-weight", "600")
     .attr("fill", GREEN2)
     .attr("font-family", "'IBM Plex Sans Thai','Inter',system-ui,sans-serif")
-    .text(d => d3.timeFormat("%-H:00")(d));
+    .text(d => `${d.getHours()}:00`);
 
-  // "เวลาที่โพสต์" axis label — centered below ticks, inside the sticky strip
+  // "เวลาที่โพสต์" axis label
   gXAxis.append("text")
     .attr("x", innerW / 2)
     .attr("y", 40)
@@ -744,7 +855,7 @@ function renderXAxis(xBase, gXAxis, gHours, gMarks, innerW, innerH) {
     .attr("font-family", "'IBM Plex Sans Thai','Inter',system-ui,sans-serif")
     .text("เวลาที่โพสต์");
 
-  // Gridlines
+  // Gridlines (draw at every hour regardless of label density)
   gHours.selectAll("line")
     .attr("x1", d => xZ(d))
     .attr("x2", d => xZ(d));
@@ -762,11 +873,12 @@ function renderXAxis(xBase, gXAxis, gHours, gMarks, innerW, innerH) {
 // ════════════════════════════════════════════════════════════
 function buildCardHTML(post, cl) {
   return [
+    // Time pill — above the content, left-aligned, green-4 background
+    `<div class="card-time-pill">${escHtml(post.time_post)}</div>`,
     `<div class="card-content">${escHtml(post.content)}</div>`,
     `<div class="card-meta">`,
     `<div class="card-row"><span class="card-label">เพจ</span><span class="card-val">${escHtml(post.user)}</span></div>`,
     `<div class="card-row"><span class="card-label">วันที่โพสต์</span><span class="card-val">${formatDateThai(post.date_post)}</span></div>`,
-    `<div class="card-row"><span class="card-label">เวลาที่โพสต์</span><span class="card-val">${escHtml(post.time_post)}</span></div>`,
     post.url
       ? `<div class="card-row card-url"><a href="${escHtml(post.url)}" target="_blank" rel="noopener">ดูโพสต์ต้นทาง ↗</a></div>`
       : "",
@@ -840,6 +952,42 @@ function setupModal() {
       }
     }
   });
+}
+
+// ════════════════════════════════════════════════════════════
+//  DATE NAVIGATION (chevron buttons)
+// ════════════════════════════════════════════════════════════
+function setupDateNav() {
+  // Build sorted list of all available dates from the data
+  const allDates = Array.from(new Set(allData.map(d => d.date_post))).sort();
+
+  function navigate(delta) {
+    const idx = allDates.indexOf(selectedDay);
+    const newIdx = idx + delta;
+    if (newIdx < 0 || newIdx >= allDates.length) return;
+    selectedDay = allDates[newIdx];
+    updateChevronState(allDates);
+    updateBarSelection();
+    buildTimeline();
+  }
+
+  function updateChevronState(dates) {
+    const idx = dates.indexOf(selectedDay);
+    document.getElementById("btn-prev").disabled = idx <= 0;
+    document.getElementById("btn-next").disabled = idx >= dates.length - 1;
+  }
+
+  document.getElementById("btn-prev").addEventListener("click", () => navigate(-1));
+  document.getElementById("btn-next").addEventListener("click", () => navigate(+1));
+
+  // Keyboard arrow keys for convenience
+  document.addEventListener("keydown", (e) => {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+    if (e.key === "ArrowLeft")  navigate(-1);
+    if (e.key === "ArrowRight") navigate(+1);
+  });
+
+  updateChevronState(allDates);
 }
 </script>
 </body>
